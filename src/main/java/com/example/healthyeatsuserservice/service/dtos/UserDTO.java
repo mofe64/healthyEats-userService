@@ -1,21 +1,16 @@
-package com.example.healthyeatsuserservice.models;
+package com.example.healthyeatsuserservice.service.dtos;
 
-import lombok.AllArgsConstructor;
+import com.example.healthyeatsuserservice.models.MealPlan;
+import com.example.healthyeatsuserservice.models.Preference;
+import com.example.healthyeatsuserservice.models.Role;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
-import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.ArrayList;
 import java.util.List;
 
-@Document
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class User {
-    @Id
+public class UserDTO {
     private String id;
     private String firstname;
     private String lastname;
@@ -25,9 +20,5 @@ public class User {
     private String email;
     private String password;
     private List<Preference> preferences;
-    @DBRef(db = "healthy-Eats-meals-db")
-    private List<MealPlan> plans = new ArrayList<>();
-
-
-
+    private List<MealPlan> plans;
 }
