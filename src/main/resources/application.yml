@@ -1,0 +1,15 @@
+spring:
+  config:
+    import: optional:configserver:http://localhost:8071
+  application:
+    name: healthyeats-userservice
+  profiles:
+    active: dev
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8070/eureka/
