@@ -1,8 +1,11 @@
 package com.example.healthyeatsuserservice.controllers;
 
 import com.example.healthyeatsuserservice.controllers.requests.IndividualRegistrationRequest;
+import com.example.healthyeatsuserservice.controllers.requests.LoginRequest;
 import com.example.healthyeatsuserservice.controllers.requests.OrganizationRegistrationRequest;
 import com.example.healthyeatsuserservice.controllers.responses.APIResponse;
+import com.example.healthyeatsuserservice.controllers.responses.AuthToken;
+import com.example.healthyeatsuserservice.controllers.responses.TokenValidityResponse;
 import com.example.healthyeatsuserservice.exceptions.UserException;
 import com.example.healthyeatsuserservice.service.UserService;
 import com.example.healthyeatsuserservice.service.dtos.UserDTO;
@@ -11,6 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
@@ -50,7 +59,30 @@ public class AuthController {
             return new ResponseEntity<>(new APIResponse(false, userException.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
-    //Todo login
+
+    @PostMapping("/register/admin")
+    public ResponseEntity<?> registerAdmin(@RequestBody @Valid IndividualRegistrationRequest request) {
+        try {
+            UserDTO userDTO = userService.registerAdmin(request);
+            return new ResponseEntity<>(userDTO, HttpStatus.OK);
+        } catch (UserException userException) {
+            return new ResponseEntity<>(new APIResponse(false, userException.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> generateToken(@RequestBody @Valid LoginRequest loginRequest) throws AuthenticationException {
+        final Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginRequest.getUsername(),
+                        loginRequest.getPassword()
+                )
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        final String token = jwtUtil.generateToken(authentication);
+        return new ResponseEntity<>(new AuthToken(token), HttpStatus.OK);
+    }
+
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)

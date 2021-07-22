@@ -1,6 +1,7 @@
 package com.example.healthyeatsuserservice.service;
 
 import com.example.healthyeatsuserservice.controllers.requests.OrganizationRegistrationRequest;
+import com.example.healthyeatsuserservice.controllers.requests.PreferenceRequest;
 import com.example.healthyeatsuserservice.exceptions.MealPlanException;
 import com.example.healthyeatsuserservice.exceptions.UserException;
 import com.example.healthyeatsuserservice.models.MealPlan;
@@ -9,6 +10,7 @@ import com.example.healthyeatsuserservice.models.Role;
 import com.example.healthyeatsuserservice.models.User;
 import com.example.healthyeatsuserservice.repository.UserRepository;
 import com.example.healthyeatsuserservice.controllers.requests.IndividualRegistrationRequest;
+import com.example.healthyeatsuserservice.service.dtos.MealPlanDTO;
 import com.example.healthyeatsuserservice.service.dtos.UserDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -109,14 +111,25 @@ public class UserServiceImpl implements UserDetailsService, UserService {
     }
 
     @Override
-    public UserDTO updateUserDetails(String userId, UserDTO userDTO) {
-        return null;
+    public UserDTO findUserByUserName(String username) {
+        User user = userRepository.findUserByUsername(username).orElse(null);
+        return modelMapper.map(user, UserDTO.class);
     }
 
     @Override
-    public void addPreference(String userId, List<String> preferences) throws UserException {
+    public UserDTO updateUserDetails(String userId, UserDTO userDTO) throws UserException {
+        User userToUpdate = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(String.format("No user found with id: %s", userId)));
+        modelMapper.map(userDTO, userToUpdate);
+        User updatedUser = userRepository.save(userToUpdate);
+        return modelMapper.map(updatedUser, UserDTO.class);
+    }
+
+    @Override
+    //Todo add logic to prevent duplicate prefs
+    public void addPreference(String userId, PreferenceRequest request) throws UserException {
         User user = findUserById(userId);
-        for (String userPreference : preferences) {
+        for (String userPreference : request.getPreferences()) {
             for (Preference preference : Preference.values()) {
                 if (userPreference.equalsIgnoreCase(preference.name())) {
                     user.getPreferences().add(preference);
@@ -127,9 +140,9 @@ public class UserServiceImpl implements UserDetailsService, UserService {
     }
 
     @Override
-    public void removePreference(String userId, List<String> preferences) throws UserException {
+    public void removePreference(String userId, PreferenceRequest request) throws UserException {
         User user = findUserById(userId);
-        for (String userPreference : preferences) {
+        for (String userPreference : request.getPreferences()) {
             for (Preference preference : Preference.values()) {
                 if (userPreference.equalsIgnoreCase(preference.name())) {
                     user.getPreferences().remove(preference);
@@ -140,8 +153,17 @@ public class UserServiceImpl implements UserDetailsService, UserService {
     }
 
     @Override
-    public MealPlan createCustomMealPlan() {
-        return null;
+    public MealPlan createCustomMealPlan(String userId, MealPlanDTO mealPlanDTO) throws UserException, MealPlanException {
+        User user = findUserById(userId);
+        ResponseEntity<?> response = mealPlanService.createCustomMealPlan(mealPlanDTO);
+        if (response.getStatusCode().is5xxServerError()) {
+            throw new MealPlanException("Looks like something went wrong, please try again");
+        }
+        MealPlan plan = new MealPlan();
+        modelMapper.map(response.getBody(), plan);
+        user.getPlans().add(plan);
+        userRepository.save(user);
+        return plan;
     }
 
     @Override

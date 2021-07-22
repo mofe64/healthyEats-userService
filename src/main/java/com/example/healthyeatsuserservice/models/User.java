@@ -26,10 +26,9 @@ public class User {
     private Set<Role> roles = new HashSet<>();
     private String email;
     private String password;
-    private List<Preference> preferences;
+    private List<Preference> preferences = new ArrayList<>();
     @DBRef(db = "healthy-Eats-meals-db")
     private List<MealPlan> plans = new ArrayList<>();
-
 
 
 }
