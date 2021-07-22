@@ -4,10 +4,9 @@ import com.example.healthyeatsuserservice.models.MealPlan;
 import com.example.healthyeatsuserservice.models.Preference;
 import com.example.healthyeatsuserservice.models.Role;
 import lombok.Data;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 
 import java.util.List;
+import java.util.Set;
 
 @Data
 public class UserDTO {
@@ -16,7 +15,7 @@ public class UserDTO {
     private String lastname;
     private String username;
     private String companyName;
-    private Role role;
+    private Set<Role> roles;
     private String email;
     private String password;
     private List<Preference> preferences;

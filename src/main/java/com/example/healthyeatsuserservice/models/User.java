@@ -8,7 +8,9 @@ import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Document
 @Data
@@ -21,7 +23,7 @@ public class User {
     private String lastname;
     private String username;
     private String companyName;
-    private Role role;
+    private Set<Role> roles = new HashSet<>();
     private String email;
     private String password;
     private List<Preference> preferences;
