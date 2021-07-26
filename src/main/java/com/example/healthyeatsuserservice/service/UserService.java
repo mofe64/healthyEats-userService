@@ -32,6 +32,8 @@ public interface UserService {
 
     MealPlan createCustomMealPlan(String userId,MealPlanDTO mealPlanDTO) throws UserException, MealPlanException;
 
+    void cancelCustomMealPlan(String userId, String planId) throws UserException, MealPlanException;
+
     List<MealPlan> getUserMealPlans(String userId) throws UserException;
 
     void subscribeUserToMealPlan(String userId, String planId) throws UserException, MealPlanException;

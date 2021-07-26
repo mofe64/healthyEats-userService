@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service(value = "userService")
 @Slf4j
@@ -165,6 +166,21 @@ public class UserServiceImpl implements UserDetailsService, UserService {
         user.getPlans().add(plan);
         userRepository.save(user);
         return plan;
+    }
+
+    @Override
+    public void cancelCustomMealPlan(String userId, String planId) throws UserException, MealPlanException {
+        User user = findUserById(userId);
+        ResponseEntity<?> response = mealPlanService.deleteMealPlan(planId);
+        if (response.getStatusCode().is4xxClientError()) {
+            throw new MealPlanException("No meal Plan found with that Id");
+        }
+        if (response.getStatusCode().is5xxServerError()) {
+            throw new MealPlanException("Looks like something went wrong, please try again");
+        }
+        List<MealPlan> updatedPlans = user.getPlans().stream().filter(mealPlan -> !mealPlan.getId().equals(planId)).collect(Collectors.toList());
+        user.setPlans(updatedPlans);
+        userRepository.save(user);
     }
 
     @Override

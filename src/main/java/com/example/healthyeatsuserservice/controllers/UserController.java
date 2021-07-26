@@ -75,7 +75,7 @@ public class UserController {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_INDIVIDUAL', 'ROLE_ORGANIZATION', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_INDIVIDUAL', 'ROLE_ORGANIZATION')")
     @PostMapping("/{userId}/plans")
     public ResponseEntity<?> createCustomMealPlan(@PathVariable String userId, @RequestBody MealPlanDTO planDTO) {
         try {
@@ -83,6 +83,17 @@ public class UserController {
             return new ResponseEntity<>(plan, HttpStatus.CREATED);
         } catch (UserException | MealPlanException exception) {
             return new ResponseEntity<>(new APIResponse(false, exception.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_INDIVIDUAL', 'ROLE_ORGANIZATION')")
+    @DeleteMapping("/{userId}/plans/{planId}")
+    public ResponseEntity<?> cancelCustomMealPlan(@PathVariable String planId, @PathVariable String userId) {
+        try {
+            userService.cancelCustomMealPlan(userId, planId);
+            return new ResponseEntity<>(new APIResponse(true, "Plan cancelled successfully"), HttpStatus.OK);
+        } catch (UserException | MealPlanException exception) {
+            return new ResponseEntity<>(new APIResponse(false, exception.getMessage()), HttpStatus.OK);
         }
     }
 
