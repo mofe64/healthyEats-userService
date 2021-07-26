@@ -1,5 +1,6 @@
 package com.example.healthyeatsuserservice.service.security.jwt;
 
+import com.example.healthyeatsuserservice.service.security.TokenProvider;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.SignatureException;
@@ -22,6 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Resource(name = "userService")
     private UserDetailsService userDetailsService;
+
     @Autowired
     private TokenProvider jwtTokenUtil;
 
@@ -34,7 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer")) {
             authToken = header.replace("Bearer", "");
             try {
-                username = jwtTokenUtil.getUsernameFromToken(authToken);
+                username = jwtTokenUtil.getUsernameFromJWTToken(authToken);
             } catch (IllegalArgumentException e) {
                 logger.error("An error has occurred while fetching username from token", e);
                 throw new IllegalArgumentException(e.getMessage());
@@ -49,12 +51,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             logger.warn("Couldn't find bearer string header will be ignored");
         }
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username); //todo
-            if (jwtTokenUtil.validateToken(authToken, userDetails)) {
-                UsernamePasswordAuthenticationToken authentication = jwtTokenUtil.getAuthenticationToken(authToken,
-                        SecurityContextHolder.getContext().getAuthentication(), userDetails);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            if (jwtTokenUtil.validateJWTToken(authToken, userDetails)) {
+                UsernamePasswordAuthenticationToken authentication =
+                        jwtTokenUtil.getAuthenticationToken(authToken,
+                                SecurityContextHolder.getContext().getAuthentication(),
+                                userDetails);
+
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
                 logger.info("authenticated user " + username + " setting security context");
+
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }

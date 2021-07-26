@@ -1,17 +1,15 @@
 package com.example.healthyeatsuserservice.service;
 
-import com.example.healthyeatsuserservice.controllers.requests.OrganizationRegistrationRequest;
-import com.example.healthyeatsuserservice.controllers.requests.PreferenceRequest;
+import com.example.healthyeatsuserservice.controllers.requests.*;
 import com.example.healthyeatsuserservice.exceptions.MealPlanException;
+import com.example.healthyeatsuserservice.exceptions.TokenException;
 import com.example.healthyeatsuserservice.exceptions.UserException;
-import com.example.healthyeatsuserservice.models.MealPlan;
-import com.example.healthyeatsuserservice.models.Preference;
-import com.example.healthyeatsuserservice.models.Role;
-import com.example.healthyeatsuserservice.models.User;
+import com.example.healthyeatsuserservice.models.*;
+import com.example.healthyeatsuserservice.repository.TokenRepository;
 import com.example.healthyeatsuserservice.repository.UserRepository;
-import com.example.healthyeatsuserservice.controllers.requests.IndividualRegistrationRequest;
 import com.example.healthyeatsuserservice.service.dtos.MealPlanDTO;
 import com.example.healthyeatsuserservice.service.dtos.UserDTO;
+import com.example.healthyeatsuserservice.service.security.TokenProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +21,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service(value = "userService")
 @Slf4j
@@ -42,6 +40,9 @@ public class UserServiceImpl implements UserDetailsService, UserService {
 
     @Autowired
     private PasswordEncoder bcryptPasswordEncoder;
+
+    @Autowired
+    private TokenRepository tokenRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -207,11 +208,74 @@ public class UserServiceImpl implements UserDetailsService, UserService {
 
     }
 
+    @Override
+    public Token generatePasswordResetToken(String username) throws UserException {
+        User userToResetPassword = userRepository.findUserByUsername(username)
+                .orElseThrow(() -> new UserException("No user found with user name " + username));
+        Token token = new Token();
+        token.setType(TokenType.PASSWORD_RESET);
+        token.setUser(userToResetPassword);
+        token.setToken(UUID.randomUUID().toString());
+        token.setExpiry(LocalDateTime.now().plusMinutes(30));
+        return tokenRepository.save(token);
+    }
+
+    @Override
+    public void resetUserPassword(PasswordResetRequest request, String passwordResetToken) throws UserException, TokenException {
+        String username = request.getUsername();
+        String newPassword = request.getNewPassword();
+        User userToResetPassword = userRepository.findUserByUsername(username)
+                .orElseThrow(() -> new UserException("No user found with user name " + username));
+        Token token = tokenRepository.findByToken(passwordResetToken)
+                .orElseThrow(() -> new TokenException(String.format("No token with value %s found", passwordResetToken)));
+        if (token.getExpiry().isBefore(LocalDateTime.now())) {
+            throw new TokenException("This password reset token has expired ");
+        }
+        if (!token.getUser().getId().equals(userToResetPassword.getId())) {
+            throw new TokenException("This password rest token does not belong to this user");
+        }
+        userToResetPassword.setPassword(bcryptPasswordEncoder.encode(newPassword));
+        userRepository.save(userToResetPassword);
+        tokenRepository.delete(token);
+    }
+
+    @Override
+    public void updateUserPassword(PasswordChangeRequest request) throws UserException {
+        String username = request.getUsername();
+        String oldPassword = request.getOldPassword();
+        String newPassword = request.getNewPassword();
+        User userToChangePassword = userRepository.findUserByUsername(username)
+                .orElseThrow(() -> new UserException("No user found with user name " + username));
+
+        boolean passwordMatch = bcryptPasswordEncoder.matches(oldPassword, userToChangePassword.getPassword());
+        if (!passwordMatch) {
+            throw new UserException("Passwords do not match");
+        }
+        userToChangePassword.setPassword(bcryptPasswordEncoder.encode(newPassword));
+        userRepository.save(userToChangePassword);
+    }
+
+    @Override
+    public User internalFindUserById(String id) {
+        return userRepository.findById(id).orElse(null);
+    }
+
     private User findUserById(String id) throws UserException {
         return userRepository.findById(id)
                 .orElseThrow(
                         () -> new UserException("No user found with Id " + id)
                 );
+    }
+
+    @Override
+    public User internalFindUserByEmail(String email) {
+        return userRepository.findUserByEmail(email).orElse(null);
+
+    }
+
+    @Override
+    public User internalFindUserByUsername(String username) {
+        return userRepository.findUserByUsername(username).orElse(null);
     }
 
     private boolean usernameExists(String username) {

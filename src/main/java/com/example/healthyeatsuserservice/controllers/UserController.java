@@ -1,6 +1,7 @@
 package com.example.healthyeatsuserservice.controllers;
 
 
+import com.example.healthyeatsuserservice.controllers.requests.PasswordChangeRequest;
 import com.example.healthyeatsuserservice.controllers.requests.PreferenceRequest;
 import com.example.healthyeatsuserservice.controllers.responses.APIResponse;
 import com.example.healthyeatsuserservice.exceptions.MealPlanException;
@@ -15,9 +16,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/userService/api/v1/user")
@@ -57,9 +63,8 @@ public class UserController {
             return new ResponseEntity<>(new APIResponse(false, exception.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
-//todo rest this auth to correct
-//    @PreAuthorize("hasAnyRole('ROLE_INDIVIDUAL', 'ROLE_ORGANIZATION', 'ROLE_ADMIN')")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+
+    @PreAuthorize("hasAnyRole('ROLE_INDIVIDUAL', 'ROLE_ORGANIZATION', 'ROLE_ADMIN')")
     @GetMapping("/{userId}/plans")
     public ResponseEntity<?> getUsersPlans(@PathVariable String userId) {
         try {
@@ -101,6 +106,29 @@ public class UserController {
         } catch (UserException userException) {
             return new ResponseEntity<>(new APIResponse(false, userException.getMessage()), HttpStatus.BAD_REQUEST);
         }
+    }
+
+    @PostMapping("/password/change")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody PasswordChangeRequest request) {
+        try {
+            userService.updateUserPassword(request);
+            return new ResponseEntity<>(new APIResponse(true, "Password changed successfully"), HttpStatus.OK);
+        } catch (UserException exception) {
+            return new ResponseEntity<>(new APIResponse(false, exception.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException exception) {
+        Map<String, String> errors = new HashMap<>();
+        exception.getBindingResult().getAllErrors().forEach((error -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        }));
+        return errors;
     }
 
 

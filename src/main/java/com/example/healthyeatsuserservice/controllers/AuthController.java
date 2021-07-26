@@ -1,15 +1,17 @@
 package com.example.healthyeatsuserservice.controllers;
 
-import com.example.healthyeatsuserservice.controllers.requests.IndividualRegistrationRequest;
-import com.example.healthyeatsuserservice.controllers.requests.LoginRequest;
-import com.example.healthyeatsuserservice.controllers.requests.OrganizationRegistrationRequest;
+import com.example.healthyeatsuserservice.controllers.requests.*;
 import com.example.healthyeatsuserservice.controllers.responses.APIResponse;
+import com.example.healthyeatsuserservice.controllers.responses.AuthResponse;
 import com.example.healthyeatsuserservice.controllers.responses.AuthToken;
-import com.example.healthyeatsuserservice.controllers.responses.TokenValidityResponse;
+import com.example.healthyeatsuserservice.exceptions.RefreshTokenException;
+import com.example.healthyeatsuserservice.exceptions.TokenException;
 import com.example.healthyeatsuserservice.exceptions.UserException;
+import com.example.healthyeatsuserservice.models.Token;
 import com.example.healthyeatsuserservice.service.UserService;
 import com.example.healthyeatsuserservice.service.dtos.UserDTO;
-import com.example.healthyeatsuserservice.service.security.jwt.TokenProvider;
+import com.example.healthyeatsuserservice.service.security.jwt.TokenProviderImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +21,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
@@ -29,16 +30,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
+@Slf4j
 @RequestMapping("/userService/api/v1/user/auth")
 public class AuthController {
     @Autowired
     private UserService userService;
 
     @Autowired
-    private TokenProvider jwtUtil;
+    private TokenProviderImpl tokenUtil;
 
     @Autowired
     private AuthenticationManager authenticationManager;
+
 
     @PostMapping("/register/individual")
     public ResponseEntity<?> registerIndividual(@RequestBody @Valid IndividualRegistrationRequest individualRegistrationRequest) {
@@ -79,9 +82,30 @@ public class AuthController {
                 )
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        final String token = jwtUtil.generateToken(authentication);
+        final String token = tokenUtil.generateJWTToken(authentication);
         return new ResponseEntity<>(new AuthToken(token), HttpStatus.OK);
     }
+
+    @GetMapping("/password/reset/{username}")
+    public ResponseEntity<?> beginResetPassword(@PathVariable String username) {
+        try {
+            Token passwordResetToken = userService.generatePasswordResetToken(username);
+            return new ResponseEntity<>(passwordResetToken, HttpStatus.OK);
+        } catch (UserException userException) {
+            return new ResponseEntity<>(new APIResponse(false, userException.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/password/reset/{token}")
+    public ResponseEntity<?> resetPassword(@PathVariable String token, @Valid @RequestBody PasswordResetRequest request) {
+        try {
+            userService.resetUserPassword(request, token);
+            return new ResponseEntity<>(new APIResponse(true, "Password reset successful"), HttpStatus.OK);
+        } catch (TokenException | UserException e) {
+            return new ResponseEntity<>(new APIResponse(false, e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
 
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
