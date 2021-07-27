@@ -1,10 +1,10 @@
 spring:
   config:
-    import: configserver:http://localhost:8071
+    import: configserver:https://healthyeats-configserver-dev.herokuapp.com/
   application:
     name: healthyeats-userservice
   profiles:
-    active: dev
+    active: prod
 #eureka:
 #  instance:
 #    prefer-ip-address: true
