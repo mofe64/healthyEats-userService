@@ -32,6 +32,7 @@ import java.util.Map;
 @RestController
 @Slf4j
 @RequestMapping("/userService/api/v1/user/auth")
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class AuthController {
     @Autowired
     private UserService userService;
