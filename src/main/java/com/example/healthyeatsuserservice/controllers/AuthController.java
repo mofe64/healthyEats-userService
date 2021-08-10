@@ -8,6 +8,7 @@ import com.example.healthyeatsuserservice.exceptions.RefreshTokenException;
 import com.example.healthyeatsuserservice.exceptions.TokenException;
 import com.example.healthyeatsuserservice.exceptions.UserException;
 import com.example.healthyeatsuserservice.models.Token;
+import com.example.healthyeatsuserservice.models.User;
 import com.example.healthyeatsuserservice.service.UserService;
 import com.example.healthyeatsuserservice.service.dtos.UserDTO;
 import com.example.healthyeatsuserservice.service.security.jwt.TokenProviderImpl;
@@ -84,7 +85,8 @@ public class AuthController {
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
         final String token = tokenUtil.generateJWTToken(authentication);
-        return new ResponseEntity<>(new AuthToken(token), HttpStatus.OK);
+        User user = userService.internalFindUserByUsername(loginRequest.getUsername());
+        return new ResponseEntity<>(new AuthToken(token, user.getId()), HttpStatus.OK);
     }
 
     @GetMapping("/password/reset/{username}")
