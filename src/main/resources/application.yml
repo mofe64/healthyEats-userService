@@ -4,7 +4,7 @@ spring:
   application:
     name: healthyeats-userservice
   profiles:
-    active: prod
+    active: dev
 #eureka:
 #  instance:
 #    prefer-ip-address: true

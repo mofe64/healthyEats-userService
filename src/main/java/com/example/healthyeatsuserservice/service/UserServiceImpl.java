@@ -7,6 +7,7 @@ import com.example.healthyeatsuserservice.exceptions.UserException;
 import com.example.healthyeatsuserservice.models.*;
 import com.example.healthyeatsuserservice.repository.TokenRepository;
 import com.example.healthyeatsuserservice.repository.UserRepository;
+import com.example.healthyeatsuserservice.service.config.QueueProducer;
 import com.example.healthyeatsuserservice.service.dtos.MealPlanDTO;
 import com.example.healthyeatsuserservice.service.dtos.UserDTO;
 import com.example.healthyeatsuserservice.service.security.TokenProvider;
@@ -45,6 +46,9 @@ public class UserServiceImpl implements UserDetailsService, UserService {
     @Autowired
     private TokenRepository tokenRepository;
 
+    @Autowired
+    private QueueProducer producer;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return loadAUserByUsername(username);
@@ -79,6 +83,16 @@ public class UserServiceImpl implements UserDetailsService, UserService {
         User newUser = modelMapper.map(details, User.class);
         newUser.getRoles().add(Role.INDIVIDUAL);
         newUser.setPassword(bcryptPasswordEncoder.encode(details.getPassword()));
+        NotificationRequest notification = new NotificationRequest();
+        notification.setAddressee(newUser.getUsername());
+        notification.setTitle("Welcome to healthy eats");
+        notification.setSender("Mofe from healthy eats");
+        try {
+            producer.produce(notification);
+        } catch (Exception exception) {
+            throw new UserException("Looks like something went wrong, please try again later");
+        }
+
         User savedUser = userRepository.save(newUser);
         return modelMapper.map(savedUser, UserDTO.class);
 
